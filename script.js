@@ -77,6 +77,11 @@ function displayQuestion() {
     li.appendChild(input);
 
     input.addEventListener("change", () => {
+      if (input.type === "radio") {
+        answerHistory[currentQuestionIndex] = new Set([index]);
+        return;
+      }
+
       if (input.checked) {
         answerHistory[currentQuestionIndex].add(index);
       } else {
