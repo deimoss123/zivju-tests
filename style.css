@@ -7,3 +7,13 @@
 li {
   list-style: none;
 }
+
+.answer-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.answer-choice label img {
+  width: 300px;
+}

@@ -9,16 +9,45 @@ import categories from "./questions.js";
 let answerHistory = [];
 
 let currentCategoryKey = null;
-let currentCategory = null; 
+let currentCategory = null;
 let currentQuestionIndex = 0;
+let startTime;
+let endTime;
+let intervalID;
 
 function startTest(categoryKey) {
+  document.getElementById("clock").style = "display:auto;";
+  startTime = Date.now();
+  endTime = Date.now() + 100 * 1000;
+
+  displayClock(endTime - Date.now());
+
+  intervalID = setInterval(() => {
+    let remainingTime = endTime - Date.now();
+    if (remainingTime <= 0) {
+      displayResults();
+      return;
+    }
+    displayClock(remainingTime);
+  }, 100);
+
   currentQuestionIndex = 0;
   currentCategoryKey = categoryKey;
   currentCategory = categories[categoryKey];
-  answerHistory = Array.from({ length: currentCategory.questions.length }, () => new Set());
+
+  answerHistory = Array.from(
+    { length: currentCategory.questions.length },
+    () => new Set(),
+  );
 
   displayQuestion();
+}
+
+function displayClock(remainingTime) {
+  const minutes = Math.floor(remainingTime / 60000);
+  const seconds = Math.floor((remainingTime % 60000) / 1000);
+  const clock = document.getElementById("clock");
+  clock.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function nextQuestion() {
@@ -34,7 +63,7 @@ function nextQuestion() {
 function resetPage() {
   answerHistory = [];
   currentCategoryKey = null;
-  currentCategory = null; 
+  currentCategory = null;
   currentQuestionIndex = 0;
 
   const rootDiv = document.getElementById("root");
@@ -52,7 +81,6 @@ window.startTest = startTest;
 window.nextQuestion = nextQuestion;
 window.resetPage = resetPage;
 
-
 function displayQuestion() {
   const rootDiv = document.getElementById("root");
   const questions = categories[currentCategoryKey].questions;
@@ -60,6 +88,7 @@ function displayQuestion() {
 
   rootDiv.innerHTML = `
     <h2>${categories[currentCategoryKey].fullName}</h2>
+
     <p>Jautājums ${currentQuestionIndex + 1} no ${questions.length}</p>
     <p>${currentQuestion.question}</p>
     <ul id="answer-list"></ul>
@@ -68,6 +97,8 @@ function displayQuestion() {
 
   currentQuestion.answers.forEach((answer, index) => {
     const li = document.createElement("li");
+    li.className = "answer-choice";
+
     const input = document.createElement("input");
     input.type = currentQuestion.multipleChoice ? "checkbox" : "radio";
     input.name = "answer";
@@ -91,7 +122,12 @@ function displayQuestion() {
 
     const label = document.createElement("label");
     label.htmlFor = `answer-${index}`;
-    label.textContent = answer;
+
+    if (currentQuestion.imgAnswers) {
+      label.innerHTML = `<img src="${answer}">`;
+    } else {
+      label.textContent = answer;
+    }
 
     li.appendChild(label);
 
@@ -100,6 +136,8 @@ function displayQuestion() {
 }
 
 function displayResults() {
+  clearInterval(intervalID);
+  document.getElementById("clock").style = "display:none;";
   const rootDiv = document.getElementById("root");
 
   let correctAnswers = 0;
