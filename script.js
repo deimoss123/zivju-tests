@@ -8,19 +8,47 @@ import categories from "./questions.js";
  * */
 let answerHistory = [];
 
+let correctlyAnsweredQuestions;
+
 let currentCategoryKey = null;
 let currentCategory = null;
 let currentQuestionIndex = 0;
+
+// cik daudz laika ir testa izpildei (sekundēs)
+const TEST_DURATION = 120;
+
 let startTime;
 let endTime;
 let intervalID;
 
 function startTest(categoryKey) {
-  document.getElementById("clock").style = "display:auto;";
-  startTime = Date.now();
-  endTime = Date.now() + 100 * 1000;
+  currentQuestionIndex = 0;
+  currentCategoryKey = categoryKey;
+  currentCategory = categories[categoryKey];
+  correctlyAnsweredQuestions = new Set();
 
-  displayClock(endTime - Date.now());
+  answerHistory = Array.from(
+    { length: currentCategory.questions.length },
+    () => new Set(),
+  );
+
+  const rootDiv = document.getElementById("root");
+  rootDiv.innerHTML = `
+    <h2>${currentCategory.fullName}</h2>
+    <div id="clock"></div>
+    <div id="questions-list">
+      ${currentCategory.questions
+        .map(
+          (_, index) =>
+            `<button onclick="goToQuestion(${index})">${index + 1}</button>`,
+        )
+        .join("")}
+    </div>
+    <div id="question-container"></div>
+  `;
+
+  startTime = Date.now();
+  endTime = Date.now() + TEST_DURATION * 1000;
 
   intervalID = setInterval(() => {
     let remainingTime = endTime - Date.now();
@@ -31,15 +59,8 @@ function startTest(categoryKey) {
     displayClock(remainingTime);
   }, 100);
 
-  currentQuestionIndex = 0;
-  currentCategoryKey = categoryKey;
-  currentCategory = categories[categoryKey];
-
-  answerHistory = Array.from(
-    { length: currentCategory.questions.length },
-    () => new Set(),
-  );
-
+  displayClock(endTime - Date.now());
+  updateQuestionsList();
   displayQuestion();
 }
 
@@ -47,7 +68,21 @@ function displayClock(remainingTime) {
   const minutes = Math.floor(remainingTime / 60000);
   const seconds = Math.floor((remainingTime % 60000) / 1000);
   const clock = document.getElementById("clock");
-  clock.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  clock.textContent = `Atlikušais laiks: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function updateQuestionsList() {
+  const questionsList = document.getElementById("questions-list");
+
+  Array.from(questionsList.children).forEach((btn, index) => {
+    if (index === currentQuestionIndex) {
+      btn.className = "current";
+    } else if (answerHistory[index].size) {
+      btn.className = "answered";
+    } else {
+      btn.className = "";
+    }
+  });
 }
 
 function nextQuestion() {
@@ -57,6 +92,18 @@ function nextQuestion() {
   }
 
   currentQuestionIndex++;
+  updateQuestionsList();
+  displayQuestion();
+}
+
+function goToQuestion(index) {
+  // šim nekad nevajadzētu notikt, bet drošībai
+  if (index < 0 || index >= currentCategory.questions.length) {
+    return;
+  }
+
+  currentQuestionIndex = index;
+  updateQuestionsList();
   displayQuestion();
 }
 
@@ -80,19 +127,24 @@ function resetPage() {
 window.startTest = startTest;
 window.nextQuestion = nextQuestion;
 window.resetPage = resetPage;
+window.goToQuestion = goToQuestion;
 
 function displayQuestion() {
-  const rootDiv = document.getElementById("root");
+  const questionDiv = document.getElementById("question-container");
   const questions = categories[currentCategoryKey].questions;
   const currentQuestion = questions[currentQuestionIndex];
+  const currentAnswers = answerHistory[currentQuestionIndex];
 
-  rootDiv.innerHTML = `
-    <h2>${categories[currentCategoryKey].fullName}</h2>
+  let btnText = "Nākamais jautājums";
+  if (currentQuestionIndex + 1 === questions.length) {
+    btnText = "Pabeigt testu";
+  }
 
+  questionDiv.innerHTML = `
     <p>Jautājums ${currentQuestionIndex + 1} no ${questions.length}</p>
     <p>${currentQuestion.question}</p>
     <ul id="answer-list"></ul>
-    <button onclick="nextQuestion()">Nākamais jautājums</button>
+    <button onclick="nextQuestion()">${btnText}</button>
   `;
 
   currentQuestion.answers.forEach((answer, index) => {
@@ -104,6 +156,10 @@ function displayQuestion() {
     input.name = "answer";
     input.value = index;
     input.id = `answer-${index}`;
+
+    if (currentAnswers.has(index)) {
+      input.checked = true;
+    }
 
     li.appendChild(input);
 
@@ -131,13 +187,13 @@ function displayQuestion() {
 
     li.appendChild(label);
 
-    rootDiv.querySelector("#answer-list").appendChild(li);
+    questionDiv.querySelector("#answer-list").appendChild(li);
   });
 }
 
 function displayResults() {
   clearInterval(intervalID);
-  document.getElementById("clock").style = "display:none;";
+  // document.getElementById("clock").style = "display:none;";
   const rootDiv = document.getElementById("root");
 
   let correctAnswers = 0;
@@ -158,13 +214,66 @@ function displayResults() {
     }
 
     correctAnswers++;
+    correctlyAnsweredQuestions.add(index);
   });
 
   rootDiv.innerHTML = `
-    <h2>${categories[currentCategoryKey].fullName}</h2>
+    <h2>${currentCategory.fullName}</h2>
     <p>Tavs rezultāts: ${correctAnswers} no ${questions.length}</p>
     <button onclick="resetPage()">Atgriezties uz sākumu</button>
+    <h3>Pārskats</h3>
+    <div id="results-list"></div>
   `;
+
+  const resultsList = document.getElementById("results-list");
+
+  questions.forEach((question, qIndex) => {
+    const questionContainer = document.createElement("div");
+    questionContainer.className = "question-result";
+
+    if (correctlyAnsweredQuestions.has(qIndex)) {
+      questionContainer.classList.add("correct");
+    }
+
+    const questionHeader = document.createElement("h4");
+    questionHeader.textContent = `${qIndex + 1}. Jautājums`;
+
+    questionContainer.appendChild(questionHeader);
+
+    const ul = document.createElement("ul");
+
+    question.answers.forEach((answer, liIndex) => {
+      const li = document.createElement("li");
+      // li.className = "answer-choice";
+
+      const input = document.createElement("input");
+      input.type = question.multipleChoice ? "checkbox" : "radio";
+      input.name = `answer-${qIndex}`;
+      input.value = liIndex;
+      input.id = `answer-${qIndex}-${liIndex}`;
+      input.disabled = true;
+
+      if (answerHistory[qIndex].has(liIndex)) {
+        input.checked = true;
+      }
+
+      const label = document.createElement("label");
+      label.htmlFor = `answer-${qIndex}-${liIndex}`;
+
+      if (question.imgAnswers) {
+        label.innerHTML = `<img src="${answer}">`;
+      } else {
+        label.textContent = answer;
+      }
+
+      li.appendChild(input);
+      li.appendChild(label);
+      ul.appendChild(li);
+    });
+
+    questionContainer.appendChild(ul);
+    resultsList.appendChild(questionContainer);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
