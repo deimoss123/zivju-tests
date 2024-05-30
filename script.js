@@ -34,8 +34,7 @@ function startTest(categoryKey) {
 
   const rootDiv = document.getElementById("root");
   rootDiv.innerHTML = `
-    <h2>${currentCategory.fullName}</h2>
-    <div id="clock"></div>
+    <h1 class="category-title">${currentCategory.fullName}</h1>
     <div id="questions-list">
       ${currentCategory.questions
         .map(
@@ -43,6 +42,10 @@ function startTest(categoryKey) {
             `<button onclick="goToQuestion(${index})">${index + 1}</button>`,
         )
         .join("")}
+    </div>
+    <div class="question-clock-row">
+      <span id="clock"></span>
+      <span id="current-question-num"></span>
     </div>
     <div id="question-container"></div>
   `;
@@ -116,10 +119,13 @@ function resetPage() {
   const rootDiv = document.getElementById("root");
 
   rootDiv.innerHTML = `
-    <p>Izvēlies tēmu, par kuru vēlies pildīt testu</p>
-    <button onclick="startTest('zivis')">Tests par zivīm</button>
-    <button onclick="startTest('parastaZvejosana')">Tests par parasto zvejošanu</button>
-    <button onclick="startTest('zemledusZvejosana')">Tests par zemledus zvejošanu</button>
+    <h1 class="main-title">ZIVIS UN ZVEJA</h1>
+    <h3 style="text-align:center;padding-bottom:12px;">Izvēlies tēmu, par kuru vēlies pildīt testu</h3>
+    <div class="start-btn-container">
+      <button class="btn" onclick="startTest('zivis')">Tests par zivīm</button>
+      <button class="btn" onclick="startTest('parastaZvejosana')">Tests par parasto zvejošanu</button>
+      <button class="btn" onclick="startTest('zemledusZvejosana')">Tests par zemledus zvejošanu</button>
+    </div>
   `;
 }
 
@@ -141,11 +147,13 @@ function displayQuestion() {
   }
 
   questionDiv.innerHTML = `
-    <p>Jautājums ${currentQuestionIndex + 1} no ${questions.length}</p>
-    <p>${currentQuestion.question}</p>
+    <h2 class="question-text">${currentQuestion.question}</h2>
     <ul id="answer-list"></ul>
-    <button onclick="nextQuestion()">${btnText}</button>
+    <button class="btn" onclick="nextQuestion()">${btnText}</button>
   `;
+
+  document.getElementById("current-question-num").textContent = 
+    `Jautājums ${currentQuestionIndex + 1} no ${questions.length}`;
 
   currentQuestion.answers.forEach((answer, index) => {
     const li = document.createElement("li");
@@ -218,10 +226,12 @@ function displayResults() {
   });
 
   rootDiv.innerHTML = `
-    <h2>${currentCategory.fullName}</h2>
-    <p>Tavs rezultāts: ${correctAnswers} no ${questions.length}</p>
-    <button onclick="resetPage()">Atgriezties uz sākumu</button>
-    <h3>Pārskats</h3>
+    <h1 class="category-title">${currentCategory.fullName}</h1>
+    <h2 style="text-align:center;">Tavs rezultāts: ${correctAnswers} no ${questions.length}</h2>
+    <div style="display:flex;justify-content:center;margin-top:8px;">
+      <button class="btn" onclick="resetPage()">Atgriezties uz sākumu</button>
+    </div>
+    <h3 style="margin-top:24px;margin-bottom:8px;">Pārskats</h3>
     <div id="results-list"></div>
   `;
 
